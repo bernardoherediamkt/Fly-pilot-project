@@ -19,6 +19,14 @@ function requestBase(req) {
   return `${proto}://${host}`;
 }
 
+function hasNdcProviderConfigured() {
+  const ids = String(process.env.NDC_PROVIDERS || '')
+    .split(',')
+    .map((item) => item.trim().toUpperCase().replace(/[^A-Z0-9]/g, '_'))
+    .filter(Boolean);
+  return ids.some((id) => Boolean(process.env[`NDC_${id}_ENDPOINT`]));
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') return send(res, 405, { error: 'METHOD_NOT_ALLOWED' });
 
@@ -43,11 +51,12 @@ export default async function handler(req, res) {
   const configured = [];
   if (process.env.SERPAPI_KEY) configured.push('google-flights-serpapi');
   if (process.env.AMADEUS_CLIENT_ID && process.env.AMADEUS_CLIENT_SECRET) configured.push('amadeus');
+  if (hasNdcProviderConfigured()) configured.push('ndc-direct');
 
   if (!configured.length) {
     return send(res, 503, {
       error: 'NO_PROVIDER_CONFIGURED',
-      message: 'Configure SERPAPI_KEY e/ou credenciais do Amadeus na Vercel.',
+      message: 'Configure SERPAPI_KEY, Amadeus e/ou um endpoint NDC direto na Vercel.',
     });
   }
 
@@ -80,6 +89,13 @@ export default async function handler(req, res) {
     });
   }
 
+  if (configured.includes('ndc-direct')) {
+    jobs.push({
+      id: 'ndc-direct',
+      url: `${base}/api/flights/ndc-search?${params.toString()}`,
+    });
+  }
+
   const results = await Promise.allSettled(jobs.map(async (job) => {
     const response = await fetch(job.url, { headers: { 'x-flypilot-internal': '1' } });
     const payload = await response.json();
@@ -100,9 +116,10 @@ export default async function handler(req, res) {
         provider: result.value.id,
         meta: result.value.payload.meta || null,
         priceInsights: result.value.payload.priceInsights || null,
+        providers: result.value.payload.providers || null,
       });
       for (const offer of result.value.payload.offers || []) {
-        offers.push({ ...offer, sourceProvider: result.value.id });
+        offers.push({ ...offer, sourceProvider: offer.sourceProvider || result.value.id });
       }
     } else {
       failures.push({ provider: job.id, message: result.reason?.message || 'Provider failed' });
@@ -117,7 +134,10 @@ export default async function handler(req, res) {
       ? Math.round(((crossSourceMedian - price) / crossSourceMedian) * 100)
       : 0;
     const baseScore = Number(offer.flyScore || 75);
-    const metaFlyScore = Math.max(45, Math.min(99, Math.round(baseScore + Math.max(-8, Math.min(8, savingsVsCrossSourceMedian * 0.3)))));
+    const directOfficialBonus = offer.officialDirect ? 3 : 0;
+    const metaFlyScore = Math.max(45, Math.min(99, Math.round(
+      baseScore + directOfficialBonus + Math.max(-8, Math.min(8, savingsVsCrossSourceMedian * 0.3)),
+    )));
     return {
       ...offer,
       savingsVsCrossSourceMedian,
@@ -125,6 +145,7 @@ export default async function handler(req, res) {
     };
   }).sort((a, b) => {
     if (a.price !== b.price) return a.price - b.price;
+    if (Boolean(a.officialDirect) !== Boolean(b.officialDirect)) return a.officialDirect ? -1 : 1;
     return b.metaFlyScore - a.metaFlyScore;
   });
 
@@ -144,11 +165,12 @@ export default async function handler(req, res) {
       failedProviders: failures.map((item) => item.provider),
       coverage: providerResults.length,
       crossSourceMedian: crossSourceMedian || null,
-      disclaimer: 'Melhor oferta encontrada entre as fontes consultadas pelo FlyPilot.',
+      disclaimer: 'Melhor oferta encontrada entre as fontes consultadas pelo FlyPilot. Ofertas NDC diretas são identificadas separadamente.',
     },
     providers: providerResults,
     failures,
     bestOffer: ranked[0] || null,
+    bestOfficialDirect: ranked.find((offer) => offer.officialDirect) || null,
     offers: ranked,
   });
 }
