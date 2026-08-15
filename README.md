@@ -4,7 +4,7 @@ FlyPilot é uma plataforma de inteligência de viagens por assinatura. O produto
 
 ## Estado do projeto
 
-Versão inicial: `v0.1-foundation`
+Versão atual: `v0.1.1-vercel-foundation`
 
 Esta entrega contém:
 - PRD completo do MVP;
@@ -51,10 +51,32 @@ npm run dev
 npm run build
 ```
 
-## GitHub Pages
+## Vercel
 
-O workflow em `.github/workflows/deploy-pages.yml` está preparado para publicar esta versão no GitHub Pages. O `vite.config.ts` usa caminhos relativos (`base: "./"`), adequados para um protótipo hospedado em subdiretório do GitHub Pages.
+Esta branch está preparada para deploy direto na **Vercel** a partir do repositório GitHub.
+
+- `vite.config.ts`: base `/` para domínio de produção;
+- `vercel.json`: preset Vite, build `npm run build`, saída `dist` e rewrite para SPA;
+- `.nvmrc` + `package.json`: Node 22.x;
+- `.vercelignore`: exclusões de deploy;
+- workflow antigo de GitHub Pages removido.
+
+Veja `docs/VERCEL_DEPLOY.md` para o passo a passo.
 
 ## Documentação
 
 Comece por `docs/PRD.md`.
+
+
+## Deploy oficial: Vercel
+
+A hospedagem principal do FlyPilot passa a ser a **Vercel**. O repositório continua no GitHub, enquanto a Vercel cuida dos builds e deployments.
+
+- Framework: Vite + React + TypeScript
+- Build: `npm run build`
+- Saída: `dist`
+- Node: 22.x
+- Configuração: `vercel.json`
+- Guia: `docs/VERCEL_DEPLOY.md`
+
+Fluxo recomendado: **GitHub → Vercel → URL de produção**.
