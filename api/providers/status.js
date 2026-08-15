@@ -9,6 +9,23 @@ export default function handler(req, res) {
   const serpApiConfigured = Boolean(process.env.SERPAPI_KEY);
   const kayakConfigured = Boolean(process.env.KAYAK_API_KEY);
   const skyscannerConfigured = Boolean(process.env.SKYSCANNER_API_KEY);
+  const ndcIds = String(process.env.NDC_PROVIDERS || '')
+    .split(',')
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+  const ndcProviders = ndcIds.map((id) => {
+    const prefix = `NDC_${id.toUpperCase().replace(/[^A-Z0-9]/g, '_')}_`;
+    const endpoint = process.env[`${prefix}ENDPOINT`];
+    const airlineCode = process.env[`${prefix}AIRLINE_CODE`] || id.toUpperCase();
+    const version = process.env[`${prefix}VERSION`] || '21.3';
+    return {
+      id: `ndc-${id}`,
+      airlineCode,
+      version,
+      configured: Boolean(endpoint),
+      live: Boolean(endpoint),
+    };
+  });
 
   res.status(200).json({
     providers: [
@@ -20,6 +37,17 @@ export default function handler(req, res) {
         live: serpApiConfigured,
         role: 'price-booking-options-deals',
         env: ['SERPAPI_KEY'],
+      },
+      {
+        id: 'ndc-direct',
+        label: 'Companhias aéreas via IATA NDC',
+        configured: ndcProviders.some((item) => item.configured),
+        mode: ndcProviders.length ? 'direct-airline-ndc' : 'awaiting-airline-endpoint',
+        live: ndcProviders.some((item) => item.live),
+        role: 'official-direct-airline-shopping',
+        configuredCount: ndcProviders.filter((item) => item.configured).length,
+        airlines: ndcProviders,
+        env: ['NDC_PROVIDERS', 'NDC_<ID>_ENDPOINT', 'NDC_<ID>_VERSION', 'NDC_<ID>_AIRLINE_CODE'],
       },
       {
         id: 'amadeus',
