@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './styles.css';
+import './v05-live.css';
 import { App } from './App';
 import { LiveSearchPage } from './LiveSearchPage';
 import { LiveRadarPage } from './LiveRadarPage';
