@@ -1,11 +1,11 @@
 {
   "name": "flypilot",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -p tsconfig.app.json && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
