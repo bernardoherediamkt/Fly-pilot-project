@@ -3,11 +3,18 @@ import ReactDOM from 'react-dom/client';
 import './styles.css';
 import { App } from './App';
 import { LiveSearchPage } from './LiveSearchPage';
+import { LiveRadarPage } from './LiveRadarPage';
 
-const isLiveSearch = window.location.pathname === '/live';
+const pathname = window.location.pathname;
+
+function Root() {
+  if (pathname === '/live') return <LiveSearchPage />;
+  if (pathname === '/radar-live') return <LiveRadarPage />;
+  return <App />;
+}
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    {isLiveSearch ? <LiveSearchPage /> : <App />}
+    <Root />
   </React.StrictMode>
 );
