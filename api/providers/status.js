@@ -6,9 +6,21 @@ export default function handler(req, res) {
 
   const amadeusConfigured = Boolean(process.env.AMADEUS_CLIENT_ID && process.env.AMADEUS_CLIENT_SECRET);
   const amadeusMode = (process.env.AMADEUS_ENV || 'test').toLowerCase();
+  const serpApiConfigured = Boolean(process.env.SERPAPI_KEY);
+  const kayakConfigured = Boolean(process.env.KAYAK_API_KEY);
+  const skyscannerConfigured = Boolean(process.env.SKYSCANNER_API_KEY);
 
   res.status(200).json({
     providers: [
+      {
+        id: 'google-flights-serpapi',
+        label: 'Google Flights via SerpApi',
+        configured: serpApiConfigured,
+        mode: serpApiConfigured ? 'live-third-party' : 'needs-serpapi-key',
+        live: serpApiConfigured,
+        role: 'price-booking-options-deals',
+        env: ['SERPAPI_KEY'],
+      },
       {
         id: 'amadeus',
         label: 'Amadeus',
@@ -16,22 +28,25 @@ export default function handler(req, res) {
         mode: amadeusMode,
         live: amadeusConfigured && amadeusMode === 'production',
         role: 'pricing-source',
+        env: ['AMADEUS_CLIENT_ID', 'AMADEUS_CLIENT_SECRET', 'AMADEUS_ENV'],
+      },
+      {
+        id: 'kayak',
+        label: 'KAYAK Flights API',
+        configured: kayakConfigured,
+        mode: kayakConfigured ? 'partner-api' : 'pending-partnership',
+        live: kayakConfigured,
+        role: 'multi-provider-price-and-referral-source',
+        env: ['KAYAK_API_KEY'],
       },
       {
         id: 'skyscanner',
-        label: 'Skyscanner',
-        configured: false,
-        mode: 'pending-partnership',
-        live: false,
+        label: 'Skyscanner Flights Live Prices',
+        configured: skyscannerConfigured,
+        mode: skyscannerConfigured ? 'partner-api' : 'pending-partnership',
+        live: skyscannerConfigured,
         role: 'price-and-referral-source',
-      },
-      {
-        id: 'google-flights',
-        label: 'Google Flights',
-        configured: false,
-        mode: 'external-redirect-only',
-        live: false,
-        role: 'external-comparison',
+        env: ['SKYSCANNER_API_KEY'],
       },
     ],
   });
